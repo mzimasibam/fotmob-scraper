@@ -27,15 +27,46 @@ app.get("/:matchId", async (req, res) => {
             ],
         });
 
-        const page = await browser.newPage();
+        const context = await browser.newContext({
+            userAgent:
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+            viewport: {
+                width: 1366,
+                height: 768,
+            },
+            locale: "en-US",
+            timezoneId: "Africa/Johannesburg",
+        });
+
+        const page = await context.newPage();
+
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, "webdriver", {
+                get: () => false,
+            });
+
+            window.chrome = {
+                runtime: {},
+            };
+
+            Object.defineProperty(navigator, "plugins", {
+                get: () => [1, 2, 3],
+            });
+
+            Object.defineProperty(navigator, "languages", {
+                get: () => ["en-US", "en"],
+            });
+        });
 
         await page.goto(
             `https://www.fotmob.com/match/${matchId}`,
             {
-                waitUntil: "domcontentloaded",
+                waitUntil: "networkidle",
                 timeout: 60000,
             }
         );
+
+        await page.waitForTimeout(5000);
 
         const data = await page.evaluate(async (matchId) => {
             const response = await fetch(
@@ -50,7 +81,7 @@ app.get("/:matchId", async (req, res) => {
         res.json(data);
 
     } catch (e) {
-        console.log(e);
+        console.error(e);
 
         if (browser) {
             await browser.close();
@@ -60,10 +91,6 @@ app.get("/:matchId", async (req, res) => {
             error: e.toString(),
         });
     }
-});
-
-app.get("/", (_, res) => {
-    res.send("FotMob Scraper API Running");
 });
 
 app.listen(PORT, () => {
