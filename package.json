@@ -1,14 +1,14 @@
 {
   "name": "fotmob-scraper",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "postinstall": "playwright install --with-deps chromium"
+    "start": "node index.js",
+    "postinstall": "playwright install chromium"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "playwright": "^1.60.0"
+    "express": "^5.1.0",
+    "playwright": "^1.53.0"
   }
 }
