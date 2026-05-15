@@ -6,6 +6,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+const PORT = process.env.PORT || 8000;
+
 app.get("/:matchId", async (req, res) => {
     const { matchId } = req.params;
 
@@ -14,6 +17,12 @@ app.get("/:matchId", async (req, res) => {
     try {
         browser = await chromium.launch({
             headless: true,
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+            ],
         });
 
         const page = await browser.newPage();
@@ -22,6 +31,7 @@ app.get("/:matchId", async (req, res) => {
             `https://www.fotmob.com/match/${matchId}`,
             {
                 waitUntil: "domcontentloaded",
+                timeout: 60000,
             }
         );
 
@@ -36,6 +46,7 @@ app.get("/:matchId", async (req, res) => {
         await browser.close();
 
         res.json(data);
+
     } catch (e) {
         console.log(e);
 
@@ -49,6 +60,10 @@ app.get("/:matchId", async (req, res) => {
     }
 });
 
-app.listen(8000, () => {
-    console.log("RUNNING ON PORT 8000");
+app.get("/", (_, res) => {
+    res.send("FotMob Scraper API Running");
+});
+
+app.listen(PORT, () => {
+    console.log(`RUNNING ON PORT ${PORT}`);
 });
