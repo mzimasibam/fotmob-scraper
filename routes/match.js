@@ -1,15 +1,22 @@
 import express from 'express';
+
 import { gotScraping } from 'got-scraping';
 import { CookieJar } from 'tough-cookie';
+
+import * as cheerio from 'cheerio';
 
 const router = express.Router();
 
 const jar = new CookieJar();
 
 const client = gotScraping.extend({
+
     cookieJar: jar,
+
     throwHttpErrors: false,
+
     http2: false,
+
     dnsLookupIpVersion: 4,
 
     retry: {
@@ -21,6 +28,7 @@ const client = gotScraping.extend({
     },
 
     headers: {
+
         'accept-language': 'en-US,en;q=0.9',
 
         'user-agent':
@@ -29,27 +37,9 @@ const client = gotScraping.extend({
 });
 
 // ----------------------------------------
-// HELPER
+// MATCH ROUTE
 // ----------------------------------------
-async function fetchFotmobApi(url) {
-
-    console.log('🌍 FETCH:', url);
-
-    const response = await client.get(url);
-
-    console.log('STATUS:', response.statusCode);
-
-    if (response.statusCode !== 200) {
-        throw new Error(`HTTP ${response.statusCode}`);
-    }
-
-    return JSON.parse(response.body);
-}
-
-// ----------------------------------------
-// MATCH DETAILS
-// ----------------------------------------
-router.get('/details', async (req, res) => {
+router.get('/', async (req, res) => {
 
     const { matchId } = req.query;
 
@@ -61,73 +51,36 @@ router.get('/details', async (req, res) => {
 
     try {
 
-        const data = await fetchFotmobApi(
-            `https://www.fotmob.com/api/data/matchDetails?matchId=${matchId}`
+        const url =
+            `https://www.fotmob.com/match/${matchId}`;
+
+        console.log('🌍 OPENING:', url);
+
+        const response =
+            await client.get(url);
+
+        console.log('STATUS:', response.statusCode);
+
+        const html = response.body;
+
+        const $ = cheerio.load(html);
+
+        const nextData =
+            $('#__NEXT_DATA__').html();
+
+        if (!nextData) {
+
+            return res.status(500).json({
+                error: 'NEXT_DATA missing',
+            });
+        }
+
+        const parsed =
+            JSON.parse(nextData);
+
+        return res.json(
+            parsed.props.pageProps
         );
-
-        return res.json(data);
-
-    } catch (err) {
-
-        console.log(err);
-
-        return res.status(500).json({
-            error: err.message,
-        });
-    }
-});
-
-// ----------------------------------------
-// VOTES
-// ----------------------------------------
-router.get('/vote', async (req, res) => {
-
-    const { matchId } = req.query;
-
-    if (!matchId) {
-        return res.status(400).json({
-            error: 'matchId required',
-        });
-    }
-
-    try {
-
-        const data = await fetchFotmobApi(
-            `https://www.fotmob.com/api/data/vote?matchId=${matchId}`
-        );
-
-        return res.json(data);
-
-    } catch (err) {
-
-        console.log(err);
-
-        return res.status(500).json({
-            error: err.message,
-        });
-    }
-});
-
-// ----------------------------------------
-// MATCH ODDS
-// ----------------------------------------
-router.get('/odds', async (req, res) => {
-
-    const { matchId } = req.query;
-
-    if (!matchId) {
-        return res.status(400).json({
-            error: 'matchId required',
-        });
-    }
-
-    try {
-
-        const data = await fetchFotmobApi(
-            `https://www.fotmob.com/api/data/matchOdds?matchId=${matchId}&ccode3=ZAF&bettingProvider=Betway_South%20Africa`
-        );
-
-        return res.json(data);
 
     } catch (err) {
 
