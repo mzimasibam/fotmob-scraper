@@ -1,110 +1,119 @@
 import express from 'express';
-import { gotScraping } from 'got-scraping';
-import { CookieJar } from 'tough-cookie';
+import { chromium } from 'playwright';
 
 const router = express.Router();
 
-const jar = new CookieJar();
-
-const client = gotScraping.extend({
-    cookieJar: jar,
-
-    throwHttpErrors: false,
-
-    http2: false,
-
-    dnsLookupIpVersion: 4,
-
-    retry: {
-        limit: 2,
-    },
-
-    timeout: {
-        request: 30000,
-    },
-
-    headers: {
-        'accept-language': 'en-US,en;q=0.9',
-
-        'user-agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-
-        accept: 'application/json, text/plain, */*',
-
-        referer: 'https://www.fotmob.com/',
-
-        origin: 'https://www.fotmob.com',
-
-        'cache-control': 'no-cache',
-
-        pragma: 'no-cache',
-    },
-});
-
 // ----------------------------------------
-// SESSION WARMER
+// SINGLE BROWSER INSTANCE
 // ----------------------------------------
-async function warmSession(matchId) {
+let browser;
 
-    const pageUrl =
-        `https://www.fotmob.com/match/${matchId}`;
+async function getBrowser() {
 
-    console.log('🔥 WARMING SESSION:', pageUrl);
+    if (!browser) {
 
-    const pageResponse =
-        await client.get(pageUrl);
-
-    console.log(
-        'WARM STATUS:',
-        pageResponse.statusCode
-    );
-
-    return pageResponse.statusCode === 200;
-}
-
-// ----------------------------------------
-// MATCH ODDS
-// ----------------------------------------
-router.get('/odds', async (req, res) => {
-
-    const { matchId } = req.query;
-
-    if (!matchId) {
-        return res.status(400).json({
-            error: 'matchId required',
+        browser = await chromium.launch({
+            headless: true,
         });
     }
 
+    return browser;
+}
+
+// ----------------------------------------
+// FETCH THROUGH REAL BROWSER
+// ----------------------------------------
+async function fetchFotmobApi(apiUrl, matchUrl) {
+
+    const browser = await getBrowser();
+
+    const context =
+        await browser.newContext({
+
+            userAgent:
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+
+            locale: 'en-US',
+        });
+
+    const page = await context.newPage();
+
+    // STEP 1:
+    // OPEN MATCH PAGE
+    console.log('🔥 Opening match page');
+
+    await page.goto(matchUrl, {
+        waitUntil: 'networkidle',
+        timeout: 60000,
+    });
+
+    // OPTIONAL:
+    // WAIT A LITTLE
+    await page.waitForTimeout(3000);
+
+    // STEP 2:
+    // CALL API INSIDE BROWSER CONTEXT
+    console.log('🌍 Fetching API');
+
+    const data = await page.evaluate(async (url) => {
+
+        const res = await fetch(url, {
+            credentials: 'include',
+        });
+
+        return {
+            status: res.status,
+            body: await res.text(),
+        };
+
+    }, apiUrl);
+
+    await context.close();
+
+    return data;
+}
+
+// ----------------------------------------
+// ODDS
+// ----------------------------------------
+router.get('/odds', async (req, res) => {
+
     try {
 
-        // STEP 1:
-        // OPEN REAL PAGE FIRST
-        await warmSession(matchId);
+        const { matchId } = req.query;
 
-        // STEP 2:
-        // CALL API USING SAME COOKIES
-        const url =
+        if (!matchId) {
+
+            return res.status(400).json({
+                error: 'matchId required',
+            });
+        }
+
+        const matchUrl =
+            `https://www.fotmob.com/match/${matchId}`;
+
+        const apiUrl =
             `https://www.fotmob.com/api/data/matchOdds?matchId=${matchId}&ccode3=ZAF`;
 
-        console.log('🌍 OPENING API:', url);
-
         const response =
-            await client.get(url);
+            await fetchFotmobApi(
+                apiUrl,
+                matchUrl
+            );
 
-        console.log('API STATUS:', response.statusCode);
+        console.log(response.status);
 
-        if (response.statusCode !== 200) {
+        if (response.status !== 200) {
 
-            return res.status(response.statusCode).json({
+            return res.status(response.status).json({
                 error: 'Blocked by FotMob',
                 body: response.body,
             });
         }
 
-        const data =
-            JSON.parse(response.body);
-
-        return res.json(data);
+        return res.json(
+            JSON.parse(response.body)
+        );
 
     } catch (err) {
 
@@ -117,48 +126,46 @@ router.get('/odds', async (req, res) => {
 });
 
 // ----------------------------------------
-// MATCH VOTE
+// VOTE
 // ----------------------------------------
 router.get('/vote', async (req, res) => {
 
-    const { matchId } = req.query;
-
-    if (!matchId) {
-        return res.status(400).json({
-            error: 'matchId required',
-        });
-    }
-
     try {
 
-        // STEP 1:
-        // WARM SESSION
-        await warmSession(matchId);
+        const { matchId } = req.query;
 
-        // STEP 2:
-        // API CALL
-        const url =
+        if (!matchId) {
+
+            return res.status(400).json({
+                error: 'matchId required',
+            });
+        }
+
+        const matchUrl =
+            `https://www.fotmob.com/match/${matchId}`;
+
+        const apiUrl =
             `https://www.fotmob.com/api/data/vote?matchId=${matchId}`;
 
-        console.log('🌍 OPENING API:', url);
-
         const response =
-            await client.get(url);
+            await fetchFotmobApi(
+                apiUrl,
+                matchUrl
+            );
 
-        console.log('API STATUS:', response.statusCode);
+        console.log(response.status);
 
-        if (response.statusCode !== 200) {
+        if (response.status !== 200) {
 
-            return res.status(response.statusCode).json({
+            return res.status(response.status).json({
                 error: 'Blocked by FotMob',
                 body: response.body,
             });
         }
 
-        const data =
-            JSON.parse(response.body);
-
-        return res.json(data);
+        return res.json(
+            JSON.parse(response.body)
+        );
 
     } catch (err) {
 
