@@ -19,7 +19,7 @@ app.get('/', (_, res) => {
 // match details
 app.use('/match', matchRoute);
 
-// odds + vote
+// odds 
 app.use('/match-odds', matchOddsRoute);
 
 const PORT = process.env.PORT || 8080;

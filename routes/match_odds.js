@@ -79,9 +79,9 @@ async function fetchFotmobApi(apiUrl, matchUrl) {
 }
 
 // ----------------------------------------
-// VOTE
+// ODDS
 // ----------------------------------------
-router.get('/vote', async (req, res) => {
+router.get('/odds', async (req, res) => {
 
     try {
 
@@ -98,7 +98,7 @@ router.get('/vote', async (req, res) => {
             `https://www.fotmob.com/match/${matchId}`;
 
         const apiUrl =
-            `https://www.fotmob.com/api/data/vote?matchId=${matchId}`;
+            `https://www.fotmob.com/api/data/odds?matchId=${matchId}`;
 
         const response =
             await fetchFotmobApi(
