@@ -1,4 +1,5 @@
 import express from 'express';
+
 import { gotScraping } from 'got-scraping';
 import { CookieJar } from 'tough-cookie';
 
@@ -38,9 +39,28 @@ const client = gotScraping.extend({
 });
 
 // ----------------------------------------
+// SESSION WARMUP
+// ----------------------------------------
+async function warmup(matchId) {
+
+    const warmupUrl =
+        `https://www.fotmob.com/match/${matchId}`;
+
+    console.log('🔥 WARMUP:', warmupUrl);
+
+    const warmup =
+        await client.get(warmupUrl);
+
+    console.log('WARMUP STATUS:', warmup.statusCode);
+
+    return warmup;
+}
+
+// ----------------------------------------
 // MATCH ODDS
 // ----------------------------------------
 router.get('/odds', async (req, res) => {
+
     const { matchId } = req.query;
 
     if (!matchId) {
@@ -50,27 +70,35 @@ router.get('/odds', async (req, res) => {
     }
 
     try {
+
+        // FIRST BYPASS TURNSTILE
+        await warmup(matchId);
+
         const url =
             `https://www.fotmob.com/api/data/matchOdds?matchId=${matchId}&ccode3=ZAF`;
 
         console.log('🌍 OPENING:', url);
 
-        const response = await client.get(url);
+        const response =
+            await client.get(url);
 
         console.log('STATUS:', response.statusCode);
 
         if (response.statusCode !== 200) {
+
             return res.status(response.statusCode).json({
                 error: 'Blocked by FotMob',
                 body: response.body,
             });
         }
 
-        const data = JSON.parse(response.body);
+        const data =
+            JSON.parse(response.body);
 
         return res.json(data);
 
     } catch (err) {
+
         console.log(err);
 
         return res.status(500).json({
@@ -83,6 +111,7 @@ router.get('/odds', async (req, res) => {
 // MATCH VOTE
 // ----------------------------------------
 router.get('/vote', async (req, res) => {
+
     const { matchId } = req.query;
 
     if (!matchId) {
@@ -92,27 +121,35 @@ router.get('/vote', async (req, res) => {
     }
 
     try {
+
+        // FIRST BYPASS TURNSTILE
+        await warmup(matchId);
+
         const url =
             `https://www.fotmob.com/api/data/vote?matchId=${matchId}`;
 
         console.log('🌍 OPENING:', url);
 
-        const response = await client.get(url);
+        const response =
+            await client.get(url);
 
         console.log('STATUS:', response.statusCode);
 
         if (response.statusCode !== 200) {
+
             return res.status(response.statusCode).json({
                 error: 'Blocked by FotMob',
                 body: response.body,
             });
         }
 
-        const data = JSON.parse(response.body);
+        const data =
+            JSON.parse(response.body);
 
         return res.json(data);
 
     } catch (err) {
+
         console.log(err);
 
         return res.status(500).json({
