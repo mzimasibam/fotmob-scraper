@@ -79,58 +79,6 @@ async function fetchFotmobApi(apiUrl, matchUrl) {
 }
 
 // ----------------------------------------
-// DETAILS
-// ----------------------------------------
-router.get('/details', async (req, res) => {
-
-    try {
-
-        const { matchId } = req.query;
-
-        if (!matchId) {
-
-            return res.status(400).json({
-                error: 'matchId required',
-            });
-        }
-
-        const matchUrl =
-            `https://www.fotmob.com/match/${matchId}`;
-
-        const apiUrl =
-            `https://www.fotmob.com/api/data/matchDetails?matchId=${matchId}&ccode3=ZAF`;
-
-        const response =
-            await fetchFotmobApi(
-                apiUrl,
-                matchUrl
-            );
-
-        console.log(response.status);
-
-        if (response.status !== 200) {
-
-            return res.status(response.status).json({
-                error: 'Blocked by FotMob',
-                body: response.body,
-            });
-        }
-
-        return res.json(
-            JSON.parse(response.body)
-        );
-
-    } catch (err) {
-
-        console.log(err);
-
-        return res.status(500).json({
-            error: err.message,
-        });
-    }
-});
-
-// ----------------------------------------
 // ODDS
 // ----------------------------------------
 router.get('/odds', async (req, res) => {

@@ -1,7 +1,7 @@
 import express from 'express';
 
 import matchRoute from './routes/match.js';
-import matchOddsRoute from './routes/match_details.js';
+import matchOddsRoute from './routes/match_odds.js';
 
 const app = express();
 
