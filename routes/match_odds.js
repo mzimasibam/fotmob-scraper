@@ -1,5 +1,4 @@
 import express from 'express';
-
 import { gotScraping } from 'got-scraping';
 import { CookieJar } from 'tough-cookie';
 
@@ -35,25 +34,32 @@ const client = gotScraping.extend({
         referer: 'https://www.fotmob.com/',
 
         origin: 'https://www.fotmob.com',
+
+        'cache-control': 'no-cache',
+
+        pragma: 'no-cache',
     },
 });
 
 // ----------------------------------------
-// SESSION WARMUP
+// SESSION WARMER
 // ----------------------------------------
-async function warmup(matchId) {
+async function warmSession(matchId) {
 
-    const warmupUrl =
+    const pageUrl =
         `https://www.fotmob.com/match/${matchId}`;
 
-    console.log('🔥 WARMUP:', warmupUrl);
+    console.log('🔥 WARMING SESSION:', pageUrl);
 
-    const warmup =
-        await client.get(warmupUrl);
+    const pageResponse =
+        await client.get(pageUrl);
 
-    console.log('WARMUP STATUS:', warmup.statusCode);
+    console.log(
+        'WARM STATUS:',
+        pageResponse.statusCode
+    );
 
-    return warmup;
+    return pageResponse.statusCode === 200;
 }
 
 // ----------------------------------------
@@ -71,18 +77,21 @@ router.get('/odds', async (req, res) => {
 
     try {
 
-        // FIRST BYPASS TURNSTILE
-        await warmup(matchId);
+        // STEP 1:
+        // OPEN REAL PAGE FIRST
+        await warmSession(matchId);
 
+        // STEP 2:
+        // CALL API USING SAME COOKIES
         const url =
             `https://www.fotmob.com/api/data/matchOdds?matchId=${matchId}&ccode3=ZAF`;
 
-        console.log('🌍 OPENING:', url);
+        console.log('🌍 OPENING API:', url);
 
         const response =
             await client.get(url);
 
-        console.log('STATUS:', response.statusCode);
+        console.log('API STATUS:', response.statusCode);
 
         if (response.statusCode !== 200) {
 
@@ -122,18 +131,21 @@ router.get('/vote', async (req, res) => {
 
     try {
 
-        // FIRST BYPASS TURNSTILE
-        await warmup(matchId);
+        // STEP 1:
+        // WARM SESSION
+        await warmSession(matchId);
 
+        // STEP 2:
+        // API CALL
         const url =
             `https://www.fotmob.com/api/data/vote?matchId=${matchId}`;
 
-        console.log('🌍 OPENING:', url);
+        console.log('🌍 OPENING API:', url);
 
         const response =
             await client.get(url);
 
-        console.log('STATUS:', response.statusCode);
+        console.log('API STATUS:', response.statusCode);
 
         if (response.statusCode !== 200) {
 
