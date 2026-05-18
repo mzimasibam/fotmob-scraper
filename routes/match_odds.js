@@ -1,76 +1,124 @@
+import express from 'express';
+import { gotScraping } from 'got-scraping';
+import { CookieJar } from 'tough-cookie';
 
-
-const express = require('express');
 const router = express.Router();
 
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const jar = new CookieJar();
 
-puppeteer.use(StealthPlugin());
+const client = gotScraping.extend({
+    cookieJar: jar,
 
-let browser;
-let page;
-let isVerified = false;
+    throwHttpErrors: false,
 
-async function initBrowser() {
-    if (!browser) {
-        console.log('🟢 Launching stealth browser (once)...');
+    http2: false,
 
-        browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox']
-        });
+    dnsLookupIpVersion: 4,
 
-        page = await browser.newPage();
+    retry: {
+        limit: 2,
+    },
 
-        console.log('🌐 Opening homepage...');
-        await page.goto('https://www.fotmob.com/', {
-            waitUntil: 'networkidle2',
-            timeout: 60000
-        });
+    timeout: {
+        request: 30000,
+    },
 
-        console.log('⏳ Waiting for Cloudflare verification (first time only)...');
-        await new Promise(resolve => setTimeout(resolve, 8000));
+    headers: {
+        'accept-language': 'en-US,en;q=0.9',
 
-        isVerified = true;
-        console.log('✅ Browser verified and ready.');
-    }
-}
+        'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
 
-router.get('/', async (req, res) => {
+        accept: 'application/json, text/plain, */*',
+
+        referer: 'https://www.fotmob.com/',
+
+        origin: 'https://www.fotmob.com',
+    },
+});
+
+// ----------------------------------------
+// MATCH ODDS
+// ----------------------------------------
+router.get('/odds', async (req, res) => {
     const { matchId } = req.query;
 
     if (!matchId) {
-        return res.status(400).json({ error: 'matchId is required' });
+        return res.status(400).json({
+            error: 'matchId required',
+        });
     }
 
-    const apiUrl = `https://www.fotmob.com/api/data/matchOdds?matchId=${matchId}&ccode3=ZAF`;
-
     try {
-        await initBrowser();
+        const url =
+            `https://www.fotmob.com/api/data/matchOdds?matchId=${matchId}&ccode3=ZAF`;
 
-        console.log(`📡 Fetching match ${matchId}...`);
+        console.log('🌍 OPENING:', url);
 
-        const result = await page.evaluate(async (url) => {
-            const r = await fetch(url);
-            return {
-                status: r.status,
-                text: await r.text()
-            };
-        }, apiUrl);
+        const response = await client.get(url);
 
-        console.log('📊 Status:', result.status);
+        console.log('STATUS:', response.statusCode);
 
-        if (result.status !== 200) {
-            return res.status(result.status).send(result.text);
+        if (response.statusCode !== 200) {
+            return res.status(response.statusCode).json({
+                error: 'Blocked by FotMob',
+                body: response.body,
+            });
         }
 
-        return res.json(JSON.parse(result.text));
+        const data = JSON.parse(response.body);
+
+        return res.json(data);
 
     } catch (err) {
-        console.error('❌ Route error:', err);
-        return res.status(500).json({ error: err.message });
+        console.log(err);
+
+        return res.status(500).json({
+            error: err.message,
+        });
     }
 });
 
-module.exports = router;
+// ----------------------------------------
+// MATCH VOTE
+// ----------------------------------------
+router.get('/vote', async (req, res) => {
+    const { matchId } = req.query;
+
+    if (!matchId) {
+        return res.status(400).json({
+            error: 'matchId required',
+        });
+    }
+
+    try {
+        const url =
+            `https://www.fotmob.com/api/data/vote?matchId=${matchId}`;
+
+        console.log('🌍 OPENING:', url);
+
+        const response = await client.get(url);
+
+        console.log('STATUS:', response.statusCode);
+
+        if (response.statusCode !== 200) {
+            return res.status(response.statusCode).json({
+                error: 'Blocked by FotMob',
+                body: response.body,
+            });
+        }
+
+        const data = JSON.parse(response.body);
+
+        return res.json(data);
+
+    } catch (err) {
+        console.log(err);
+
+        return res.status(500).json({
+            error: err.message,
+        });
+    }
+});
+
+export default router;

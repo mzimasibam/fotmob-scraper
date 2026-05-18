@@ -1,6 +1,7 @@
 import express from 'express';
 
 import matchRoute from './routes/match.js';
+import matchOddsRoute from './routes/match_odds.js';
 
 const app = express();
 
@@ -15,7 +16,11 @@ app.get('/', (_, res) => {
     res.send('✅ Server alive');
 });
 
+// match details
 app.use('/match', matchRoute);
+
+// odds + vote
+app.use('/match-odds', matchOddsRoute);
 
 const PORT = process.env.PORT || 8080;
 
