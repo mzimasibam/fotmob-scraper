@@ -1,133 +1,133 @@
-import express from 'express';
-import { chromium } from 'playwright';
+// import express from 'express';
+// import { chromium } from 'playwright';
 
-const router = express.Router();
+// const router = express.Router();
 
-// ----------------------------------------
-// SINGLE BROWSER INSTANCE
-// ----------------------------------------
-let browser;
+// // ----------------------------------------
+// // SINGLE BROWSER INSTANCE
+// // ----------------------------------------
+// let browser;
 
-async function getBrowser() {
+// async function getBrowser() {
 
-    if (!browser) {
+//     if (!browser) {
 
-        browser = await chromium.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-            ],
-        });
-    }
+//         browser = await chromium.launch({
+//             headless: true,
+//             args: [
+//                 '--no-sandbox',
+//                 '--disable-setuid-sandbox',
+//                 '--disable-dev-shm-usage',
+//             ],
+//         });
+//     }
 
-    return browser;
-}
+//     return browser;
+// }
 
-// ----------------------------------------
-// FETCH THROUGH REAL BROWSER
-// ----------------------------------------
-async function fetchFotmobApi(apiUrl, matchUrl) {
+// // ----------------------------------------
+// // FETCH THROUGH REAL BROWSER
+// // ----------------------------------------
+// async function fetchFotmobApi(apiUrl, matchUrl) {
 
-    const browser = await getBrowser();
+//     const browser = await getBrowser();
 
-    const context =
-        await browser.newContext({
+//     const context =
+//         await browser.newContext({
 
-            userAgent:
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+//             userAgent:
+//                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
 
-            locale: 'en-US',
-        });
+//             locale: 'en-US',
+//         });
 
-    const page = await context.newPage();
+//     const page = await context.newPage();
 
-    // STEP 1:
-    // OPEN MATCH PAGE
-    console.log('🔥 Opening match page');
+//     // STEP 1:
+//     // OPEN MATCH PAGE
+//     console.log('🔥 Opening match page');
 
-    await page.goto(matchUrl, {
-        waitUntil: 'networkidle',
-        timeout: 60000,
-    });
+//     await page.goto(matchUrl, {
+//         waitUntil: 'networkidle',
+//         timeout: 60000,
+//     });
 
-    // OPTIONAL:
-    // WAIT A LITTLE
-    await page.waitForTimeout(3000);
+//     // OPTIONAL:
+//     // WAIT A LITTLE
+//     await page.waitForTimeout(3000);
 
-    // STEP 2:
-    // CALL API INSIDE BROWSER CONTEXT
-    console.log('🌍 Fetching API');
+//     // STEP 2:
+//     // CALL API INSIDE BROWSER CONTEXT
+//     console.log('🌍 Fetching API');
 
-    const data = await page.evaluate(async (url) => {
+//     const data = await page.evaluate(async (url) => {
 
-        const res = await fetch(url, {
-            credentials: 'include',
-        });
+//         const res = await fetch(url, {
+//             credentials: 'include',
+//         });
 
-        return {
-            status: res.status,
-            body: await res.text(),
-        };
+//         return {
+//             status: res.status,
+//             body: await res.text(),
+//         };
 
-    }, apiUrl);
+//     }, apiUrl);
 
-    await context.close();
+//     await context.close();
 
-    return data;
-}
+//     return data;
+// }
 
-// ----------------------------------------
-// ODDS
-// ----------------------------------------
-router.get('/odds', async (req, res) => {
+// // ----------------------------------------
+// // ODDS
+// // ----------------------------------------
+// router.get('/odds', async (req, res) => {
 
-    try {
+//     try {
 
-        const { matchId } = req.query;
+//         const { matchId } = req.query;
 
-        if (!matchId) {
+//         if (!matchId) {
 
-            return res.status(400).json({
-                error: 'matchId required',
-            });
-        }
+//             return res.status(400).json({
+//                 error: 'matchId required',
+//             });
+//         }
 
-        const matchUrl =
-            `https://www.fotmob.com/match/${matchId}`;
+//         const matchUrl =
+//             `https://www.fotmob.com/match/${matchId}`;
 
-        const apiUrl =
-            `https://www.fotmob.com/api/data/odds?matchId=${matchId}`;
+//         const apiUrl =
+//             `https://www.fotmob.com/api/data/odds?matchId=${matchId}`;
 
-        const response =
-            await fetchFotmobApi(
-                apiUrl,
-                matchUrl
-            );
+//         const response =
+//             await fetchFotmobApi(
+//                 apiUrl,
+//                 matchUrl
+//             );
 
-        console.log(response.status);
+//         console.log(response.status);
 
-        if (response.status !== 200) {
+//         if (response.status !== 200) {
 
-            return res.status(response.status).json({
-                error: 'Blocked by FotMob',
-                body: response.body,
-            });
-        }
+//             return res.status(response.status).json({
+//                 error: 'Blocked by FotMob',
+//                 body: response.body,
+//             });
+//         }
 
-        return res.json(
-            JSON.parse(response.body)
-        );
+//         return res.json(
+//             JSON.parse(response.body)
+//         );
 
-    } catch (err) {
+//     } catch (err) {
 
-        console.log(err);
+//         console.log(err);
 
-        return res.status(500).json({
-            error: err.message,
-        });
-    }
-});
+//         return res.status(500).json({
+//             error: err.message,
+//         });
+//     }
+// });
 
-export default router;
+// export default router;

@@ -1,7 +1,6 @@
 import express from 'express';
 
 import matchRoute from './routes/match.js';
-import matchOddsRoute from './routes/match_odds.js';
 
 const app = express();
 
@@ -19,8 +18,6 @@ app.get('/', (_, res) => {
 // match details
 app.use('/match', matchRoute);
 
-// odds 
-app.use('/match-odds', matchOddsRoute);
 
 const PORT = process.env.PORT || 8080;
 
