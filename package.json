@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "A fast backend for fetching football matches from Fotmob",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
