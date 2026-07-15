@@ -21,7 +21,7 @@ export async function getLiveMatches() {
 }
 
 
-export async function getLiveMatches() {
+export async function getUpcomingMatches() {
 
     const in30Minutes =
         new Date(Date.now() + 30 * 60 * 1000).toISOString();
