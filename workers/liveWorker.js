@@ -51,7 +51,22 @@ async function processMatch(match) {
 
         const latest = await fetchMatch(match.id);
 
-        // Nothing changed
+        // Finished match with extra polls left
+        if (
+            latest.header.status.finished &&
+            match.extra_polls > 0
+        ) {
+
+            await updateMatch(match, latest);
+
+            console.log(
+                `⏳ Final polls left: ${match.extra_polls - 1}`
+            );
+
+            return;
+        }
+
+        // Normal unchanged check
         if (equal(match.match_json, latest)) {
 
             console.log(`⏭️ ${match.id} unchanged`);
@@ -59,11 +74,8 @@ async function processMatch(match) {
             return;
         }
 
-        console.log(`💾 Updating ${match.id}`);
+        await updateMatch(match, latest);
 
-        await updateMatch(match.id, latest);
-
-        console.log(`✅ Updated ${match.id}`);
 
     } catch (err) {
 

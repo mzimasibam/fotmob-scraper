@@ -9,13 +9,10 @@ export async function getLiveMatches() {
 
     const { data, error } = await supabase
         .from('matches')
-        .select('id, match_json, livetime, status')
-        .neq('status', 'FT')
-        .neq('livetime', '');
+        .select('*')
+        .or('livetime.neq.,extra_polls.gt.0');
 
-    if (error) {
-        throw error;
-    }
+    if (error) throw error;
 
     return data;
 }
@@ -40,29 +37,39 @@ export async function getUpcomingMatches() {
     return data;
 }
 
-// Update one match
-export async function updateMatch(id, latest) {
+export async function updateMatch(match, latest) {
+
+    const update = {
+        match_json: latest,
+
+        livetime:
+            latest.header.status.liveTime?.short ?? '',
+
+        status:
+            latest.header.status.finished
+                ? 'FT'
+                : ''
+    };
+
+    // Match just finished
+    if (
+        latest.header.status.finished &&
+        match.extra_polls === 0
+    ) {
+        update.extra_polls = 2;
+    } else if (
+        latest.header.status.finished &&
+        match.extra_polls > 0
+    ) {
+        update.extra_polls = match.extra_polls - 1;
+    }
 
     const { error } = await supabase
         .from('matches')
-        .update({
+        .update(update)
+        .eq('id', match.id);
 
-            match_json: latest,
-
-            livetime:
-                latest.header.status.liveTime?.short ?? '',
-
-            status:
-                latest.header.status.finished
-                    ? 'FT'
-                    : ''
-
-        })
-        .eq('id', id);
-
-    if (error)
-        throw error;
-
+    if (error) throw error;
 }
 
 export default supabase;

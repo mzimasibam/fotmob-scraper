@@ -31,7 +31,7 @@ export async function startKickoffWorker() {
                 }
 
                 await updateMatch(
-                    match.id,
+                    match,
                     latest
                 );
 
